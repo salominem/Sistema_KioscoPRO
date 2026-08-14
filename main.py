@@ -39,6 +39,12 @@ class LoginWindow(ctk.CTk):
         self.geometry("400x500")
         self.resizable(False, False)
         
+        # Cargar el ícono en la ventana de Login
+        try:
+            self.iconbitmap("universum.ico")
+        except Exception:
+            pass
+        
         # Colores originales del Kiosco aplicados al login
         self.colores = {
             "fondo_ventana": "#F4F1EA", 
@@ -65,18 +71,16 @@ class LoginWindow(ctk.CTk):
 
         # --- ZONA SUPERIOR: LOGO Y TÍTULOS ---
         try:
-            self.logo_img = ctk.CTkImage(light_image=Image.open("universum.jpg"), size=(80, 80))
+            self.logo_img = ctk.CTkImage(light_image=Image.open("universum.jpg"), size=(60, 60))
             lbl_logo = ctk.CTkLabel(card, image=self.logo_img, text="")
             lbl_logo.pack(pady=(25, 5))
         except Exception:
             lbl_logo_txt = ctk.CTkLabel(card, text="✦ Universum", font=("Roboto", 16, "bold"), text_color=self.colores["acento"])
             lbl_logo_txt.pack(pady=(25, 5))
 
-        # Título principal solicitado
         lbl_titulo = ctk.CTkLabel(card, text="Sistema Kiosco PRO", font=("Roboto", 20, "bold"), text_color=self.colores["texto_principal"])
         lbl_titulo.pack(pady=(0, 2))
 
-        # Subtítulo más chico abajo
         lbl_sub = ctk.CTkLabel(card, text="Acceso al Sistema", font=("Roboto", 12), text_color=self.colores["texto_secundario"])
         lbl_sub.pack(pady=(0, 20))
 
@@ -127,6 +131,12 @@ class KioscoMainApp(ctk.CTk):
         self.geometry("1150x680")
         self.minsize(1000, 600)
         self.configure(fg_color=COLORES["fondo_principal"])
+
+        # Intentar cargar el ícono de la ventana (esquina superior izquierda)
+        try:
+            self.iconbitmap("universum.ico")
+        except Exception:
+            pass
 
         # Forzar actualización y centrar perfectamente en la pantalla
         self.update_idletasks()
