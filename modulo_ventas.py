@@ -18,16 +18,29 @@ class VentasFrame(ctk.CTkFrame):
         self.crear_panel_izquierdo()
         self.crear_panel_derecho()
 
+        # Enfoque inicial y configuración de ATAJOS DE TECLADO GLOBALES
         self.after(100, lambda: self.entry_codigo.focus())
+        self.configurar_atajos()
+
+    def configurar_atajos(self):
+        # F2 para ir directo al buscador
+        self.winfo_toplevel().bind("<F2>", lambda event: self.enfocar_buscador())
+        # F4 para cobrar directo
+        self.winfo_toplevel().bind("<F4>", lambda event: self.procesar_cobro())
+        # Supr (Delete) para eliminar el ítem seleccionado
+        self.winfo_toplevel().bind("<Delete>", lambda event: self.eliminar_item_seleccionado())
+
+    def enfocar_buscador(self):
+        self.sugerencias_frame.place_forget()
+        self.entry_codigo.focus()
+        self.entry_codigo.select_range(0, 'end')
 
     def crear_panel_izquierdo(self):
-        # Usamos relative position container para permitir marcos flotantes dentro
         self.left_frame = ctk.CTkFrame(self, fg_color=self.colores["fondo_card"], corner_radius=10, border_width=1, border_color="#E0DCD0")
         self.left_frame.grid(row=0, column=0, sticky="nsew", padx=(0, 10))
         self.left_frame.grid_columnconfigure(0, weight=1)
-        self.left_frame.grid_rowconfigure(2, weight=1) # Fila de la tabla adaptada
+        self.left_frame.grid_rowconfigure(2, weight=1)
 
-        # Fila superior de escaneo / búsqueda
         top_bar = ctk.CTkFrame(self.left_frame, fg_color="transparent")
         top_bar.grid(row=0, column=0, sticky="ew", padx=15, pady=(15, 10))
         top_bar.grid_columnconfigure(1, weight=1)
@@ -41,7 +54,7 @@ class VentasFrame(ctk.CTkFrame):
         self.entry_codigo = ctk.CTkEntry(
             top_bar, 
             textvariable=self.busqueda_var,
-            placeholder_text="Escribir nombre o pasar lector...", 
+            placeholder_text="Escribir nombre o pasar lector (F2)...", 
             font=("Roboto", 13), 
             height=35
         )
@@ -55,17 +68,13 @@ class VentasFrame(ctk.CTkFrame):
         )
         btn_buscar.grid(row=0, column=2, sticky="e")
 
-        # Contenedor flotante de sugerencias (usando .place para superponerse sin mover la tabla)
         self.sugerencias_frame = ctk.CTkFrame(self.left_frame, fg_color="#FFFFFF", border_width=1, border_color="#3498DB", corner_radius=6)
-        # Oculto por defecto (no lo colocamos con grid ni pack para que no empuje nada)
 
-        # Encabezado visual de la tabla
         header_tabla = ctk.CTkFrame(self.left_frame, fg_color="#EFECE6", height=35, corner_radius=6)
         header_tabla.grid(row=1, column=0, sticky="ew", padx=15, pady=(5, 5))
         
         ctk.CTkLabel(header_tabla, text="NOMBRE DEL PRODUCTO / CANTIDAD / PRECIO", font=("Roboto", 12, "bold"), text_color=self.colores["texto_principal"]).pack(side="left", padx=15, pady=6)
 
-        # Área de la tabla (Lista de productos en carrito)
         self.tabla_frame = ctk.CTkScrollableFrame(self.left_frame, fg_color="#F9F9F9", corner_radius=6)
         self.tabla_frame.grid(row=2, column=0, sticky="nsew", padx=15, pady=(0, 15))
 
@@ -88,7 +97,7 @@ class VentasFrame(ctk.CTkFrame):
         self.lbl_total.pack(anchor="w", padx=15, pady=(0, 10))
 
         btn_eliminar = ctk.CTkButton(
-            right_frame, text="ELIMINAR ÍTEM", font=("Roboto", 12, "bold"), height=34,
+            right_frame, text="ELIMINAR ÍTEM (Supr)", font=("Roboto", 12, "bold"), height=34,
             fg_color="#E74C3C", hover_color="#C0392B", text_color="#FFFFFF",
             corner_radius=6,
             command=self.eliminar_item_seleccionado
@@ -96,7 +105,7 @@ class VentasFrame(ctk.CTkFrame):
         btn_eliminar.grid(row=2, column=0, sticky="ew", padx=15, pady=(0, 8))
 
         btn_cobrar = ctk.CTkButton(
-            right_frame, text="COBRAR", font=("Roboto", 14, "bold"), height=42,
+            right_frame, text="COBRAR (F4)", font=("Roboto", 14, "bold"), height=42,
             fg_color="#27AE60", hover_color="#219653", text_color="#FFFFFF",
             corner_radius=6,
             command=self.procesar_cobro
@@ -141,9 +150,7 @@ class VentasFrame(ctk.CTkFrame):
             )
             btn_sug.pack(fill="x", padx=2, pady=2)
 
-        # Posicionamos el buscador de manera flotante justo debajo del campo de texto principal
         self.sugerencias_frame.place(x=155, y=56, relwidth=0.62)
-        # Aseguramos que se dibuje por encima de los demás elementos de la tarjeta
         self.sugerencias_frame.lift()
 
     def seleccionar_producto_sugerido(self, producto):
