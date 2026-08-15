@@ -97,7 +97,7 @@ class VentasFrame(ctk.CTkFrame):
         self.lbl_total.pack(anchor="w", padx=15, pady=(0, 10))
 
         btn_eliminar = ctk.CTkButton(
-            right_frame, text="ELIMINAR ÍTEM (Supr)", font=("Roboto", 12, "bold"), height=34,
+            right_frame, text="ELIMINAR (Supr)", font=("Roboto", 12, "bold"), height=34,
             fg_color="#E74C3C", hover_color="#C0392B", text_color="#FFFFFF",
             corner_radius=6,
             command=self.eliminar_item_seleccionado
@@ -303,7 +303,7 @@ class VentasFrame(ctk.CTkFrame):
             self.indice_seleccionado = None
             self.actualizar_tabla()
         else:
-            messagebox.showwarning("Seleccione un ítem", "Haga clic sobre el producto en la tabla que desea eliminar.")
+            messagebox.showwarning("Seleccione un producto", "Haga clic sobre el producto en la tabla que desea eliminar.")
         
         self.entry_codigo.focus()
 
