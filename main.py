@@ -112,7 +112,6 @@ class LoginWindow(ctk.CTk):
         usuario = self.entry_usuario.get().strip()
         password = self.entry_password.get().strip()
         
-        # Validación básica de prueba (ajusta según tu base de datos de usuarios si la tienes conectada aquí)
         if usuario != "" and password != "":
             self.destroy()
             self.on_login_success(usuario, "administrador")

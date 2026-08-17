@@ -18,6 +18,8 @@ class Producto(BaseModel):
     nombre = CharField()
     precio_venta = FloatField()
     precio_costo = FloatField(null=True)
+    stock = IntegerField(default=0)              # Campo agregado para el control de stock
+    fecha_vencimiento = CharField(null=True)     # Campo agregado para la fecha de vencimiento
 
 class Venta(BaseModel):
     fecha_hora = DateTimeField(default=datetime.datetime.now)
