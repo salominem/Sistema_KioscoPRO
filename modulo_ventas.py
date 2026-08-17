@@ -138,12 +138,14 @@ class VentasFrame(ctk.CTkFrame):
             return
 
         for prod in productos_encontrados:
+            # Indicamos visualmente en la sugerencia si no hay stock
+            aviso_stock = f" (SIN STOCK)" if prod.stock <= 0 else f" — Stock: {prod.stock}"
             btn_sug = ctk.CTkButton(
                 self.sugerencias_frame, 
-                text=f"{prod.nombre}  —  Precio: ${prod.precio_venta:.2f}", 
+                text=f"{prod.nombre}  —  Precio: ${prod.precio_venta:.2f}{aviso_stock}", 
                 font=("Roboto", 12),
                 fg_color="transparent", 
-                text_color=self.colores["texto_principal"],
+                text_color="#C0392B" if prod.stock <= 0 else self.colores["texto_principal"],
                 hover_color="#E8F4FD",
                 anchor="w",
                 command=lambda p=prod: self.seleccionar_producto_sugerido(p)
@@ -196,12 +198,32 @@ class VentasFrame(ctk.CTkFrame):
         self.entry_codigo.focus()
 
     def agregar_producto_al_carrito(self, producto):
+        # --- VALIDACIÓN DE STOCK ---
+        if producto.stock <= 0:
+            messagebox.showwarning(
+                "Sin Stock", 
+                f"⚠️ El producto '{producto.nombre}' no tiene stock disponible (Stock: 0)."
+            )
+            self.busqueda_var.set("")
+            self.entry_codigo.focus()
+            return
+        # ---------------------------
+
         cantidad = 1
         encontrado = False
         
         for item in self.carrito:
             if item["producto"].id == producto.id:
                 nueva_cantidad = item["cantidad"] + cantidad
+                # Validar que al sumar más unidades no superemos el stock disponible en inventario
+                if nueva_cantidad > producto.stock:
+                    messagebox.showwarning(
+                        "Stock Insuficiente", 
+                        f"Solo hay {producto.stock} unidades disponibles de '{producto.nombre}'."
+                    )
+                    self.entry_codigo.focus()
+                    return
+
                 item["cantidad"] = nueva_cantidad
                 item["subtotal"] = producto.precio_venta * nueva_cantidad
                 encontrado = True
@@ -279,6 +301,14 @@ class VentasFrame(ctk.CTkFrame):
                 return
 
             prod = self.carrito[index]["producto"]
+
+            # Validar stock disponible al modificar cantidad manualmente en la tabla
+            if nueva_cant > prod.stock:
+                messagebox.showwarning("Stock Insuficiente", f"Solo hay {prod.stock} unidades disponibles en inventario.")
+                self.actualizar_tabla()
+                self.entry_codigo.focus()
+                return
+
             self.indice_seleccionado = index
             self.carrito[index]["cantidad"] = nueva_cant
             self.carrito[index]["subtotal"] = prod.precio_venta * nueva_cant
@@ -374,6 +404,10 @@ class VentasFrame(ctk.CTkFrame):
                 prod = item["producto"]
                 cant = item["cantidad"]
                 sub = item["subtotal"]
+
+                # Descontar stock en la base de datos
+                prod.stock -= cant
+                prod.save()
 
                 DetalleVenta.create(
                     venta=nueva_venta,
