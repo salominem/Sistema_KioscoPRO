@@ -72,8 +72,13 @@ class VentasFrame(ctk.CTkFrame):
 
         header_tabla = ctk.CTkFrame(self.left_frame, fg_color="#EFECE6", height=35, corner_radius=6)
         header_tabla.grid(row=1, column=0, sticky="ew", padx=15, pady=(5, 5))
+        header_tabla.grid_columnconfigure(0, weight=2)
+        header_tabla.grid_columnconfigure(1, weight=1)
+        header_tabla.grid_columnconfigure(2, weight=1)
         
-        ctk.CTkLabel(header_tabla, text="NOMBRE DEL PRODUCTO / CANTIDAD / PRECIO", font=("Roboto", 12, "bold"), text_color=self.colores["texto_principal"]).pack(side="left", padx=15, pady=6)
+        ctk.CTkLabel(header_tabla, text="PRODUCTO", font=("Roboto", 12, "bold"), text_color=self.colores["texto_principal"]).grid(row=0, column=0, sticky="w", padx=15, pady=6)
+        ctk.CTkLabel(header_tabla, text="CANTIDAD", font=("Roboto", 12, "bold"), text_color=self.colores["texto_principal"]).grid(row=0, column=1, padx=5, pady=6)
+        ctk.CTkLabel(header_tabla, text="SUBTOTAL ($)", font=("Roboto", 12, "bold"), text_color=self.colores["texto_principal"]).grid(row=0, column=2, sticky="e", padx=15, pady=6)
 
         self.tabla_frame = ctk.CTkScrollableFrame(self.left_frame, fg_color="#F9F9F9", corner_radius=6)
         self.tabla_frame.grid(row=2, column=0, sticky="nsew", padx=15, pady=(0, 15))
@@ -138,7 +143,6 @@ class VentasFrame(ctk.CTkFrame):
             return
 
         for prod in productos_encontrados:
-            # Indicamos visualmente en la sugerencia si no hay stock
             aviso_stock = f" (SIN STOCK)" if prod.stock <= 0 else f" — Stock: {prod.stock}"
             btn_sug = ctk.CTkButton(
                 self.sugerencias_frame, 
@@ -198,7 +202,6 @@ class VentasFrame(ctk.CTkFrame):
         self.entry_codigo.focus()
 
     def agregar_producto_al_carrito(self, producto):
-        # --- VALIDACIÓN DE STOCK ---
         if producto.stock <= 0:
             messagebox.showwarning(
                 "Sin Stock", 
@@ -207,7 +210,6 @@ class VentasFrame(ctk.CTkFrame):
             self.busqueda_var.set("")
             self.entry_codigo.focus()
             return
-        # ---------------------------
 
         cantidad = 1
         encontrado = False
@@ -215,7 +217,6 @@ class VentasFrame(ctk.CTkFrame):
         for item in self.carrito:
             if item["producto"].id == producto.id:
                 nueva_cantidad = item["cantidad"] + cantidad
-                # Validar que al sumar más unidades no superemos el stock disponible en inventario
                 if nueva_cantidad > producto.stock:
                     messagebox.showwarning(
                         "Stock Insuficiente", 
@@ -225,7 +226,7 @@ class VentasFrame(ctk.CTkFrame):
                     return
 
                 item["cantidad"] = nueva_cantidad
-                item["subtotal"] = producto.precio_venta * nueva_cantidad
+                item["subtotal"] = item["precio_unitario"] * nueva_cantidad
                 encontrado = True
                 break
 
@@ -234,6 +235,7 @@ class VentasFrame(ctk.CTkFrame):
             self.carrito.append({
                 "producto": producto,
                 "cantidad": cantidad,
+                "precio_unitario": producto.precio_venta, # Guardamos el precio unitario editable
                 "subtotal": subtotal
             })
 
@@ -250,6 +252,7 @@ class VentasFrame(ctk.CTkFrame):
         for index, item in enumerate(self.carrito):
             prod = item["producto"]
             cant = item["cantidad"]
+            precio_unit = item["precio_unitario"]
             sub = item["subtotal"]
             total_general += sub
 
@@ -262,20 +265,29 @@ class VentasFrame(ctk.CTkFrame):
 
             fila = ctk.CTkFrame(self.tabla_frame, fg_color=bg_color, corner_radius=5, border_width=1, border_color=border_col)
             fila.pack(fill="x", padx=5, pady=4)
-            fila.grid_columnconfigure(0, weight=3)
+            fila.grid_columnconfigure(0, weight=2)
             fila.grid_columnconfigure(1, weight=1)
             fila.grid_columnconfigure(2, weight=1)
+            fila.grid_columnconfigure(3, weight=1)
 
             lbl_nombre = ctk.CTkLabel(fila, text=prod.nombre, font=("Roboto", 13), text_color=self.colores["texto_principal"])
-            lbl_nombre.grid(row=0, column=0, sticky="w", padx=12, pady=8)
+            lbl_nombre.grid(row=0, column=0, sticky="w", padx=10, pady=8)
 
-            entry_cant_row = ctk.CTkEntry(fila, font=("Roboto", 12, "bold"), width=55, height=28)
+            # Cantidad editable
+            entry_cant_row = ctk.CTkEntry(fila, font=("Roboto", 12, "bold"), width=45, height=28)
             entry_cant_row.insert(0, str(cant))
             entry_cant_row.grid(row=0, column=1, padx=5, pady=8)
             entry_cant_row.bind("<Return>", lambda event, idx=index, entry=entry_cant_row: self.cambiar_cantidad_desde_tabla(idx, entry))
 
+            # NUEVO: Precio Unitario editable (para cambiar por gramos o precio personalizado)
+            entry_precio_row = ctk.CTkEntry(fila, font=("Roboto", 12, "bold"), width=70, height=28)
+            entry_precio_row.insert(0, f"{precio_unit:.2f}")
+            entry_precio_row.grid(row=0, column=2, padx=5, pady=8)
+            entry_precio_row.bind("<Return>", lambda event, idx=index, entry=entry_precio_row: self.cambiar_precio_desde_tabla(idx, entry))
+
+            # Subtotal
             lbl_sub = ctk.CTkLabel(fila, text=f"${sub:.2f}", font=("Roboto", 13, "bold"), text_color=self.colores["texto_principal"])
-            lbl_sub.grid(row=0, column=2, sticky="e", padx=12, pady=8)
+            lbl_sub.grid(row=0, column=3, sticky="e", padx=10, pady=8)
 
             elementos = [fila, lbl_nombre, lbl_sub]
             for elem in elementos:
@@ -302,7 +314,6 @@ class VentasFrame(ctk.CTkFrame):
 
             prod = self.carrito[index]["producto"]
 
-            # Validar stock disponible al modificar cantidad manualmente en la tabla
             if nueva_cant > prod.stock:
                 messagebox.showwarning("Stock Insuficiente", f"Solo hay {prod.stock} unidades disponibles en inventario.")
                 self.actualizar_tabla()
@@ -311,12 +322,32 @@ class VentasFrame(ctk.CTkFrame):
 
             self.indice_seleccionado = index
             self.carrito[index]["cantidad"] = nueva_cant
-            self.carrito[index]["subtotal"] = prod.precio_venta * nueva_cant
+            self.carrito[index]["subtotal"] = self.carrito[index]["precio_unitario"] * nueva_cant
             self.actualizar_tabla()
             self.entry_codigo.focus()
 
         except ValueError:
             messagebox.showerror("Error de formato", "Ingrese un número entero válido para la cantidad.")
+            self.actualizar_tabla()
+            self.entry_codigo.focus()
+
+    def cambiar_precio_desde_tabla(self, index, entry_widget):
+        try:
+            nuevo_precio = float(entry_widget.get().strip().replace(",", "."))
+            if nuevo_precio < 0:
+                messagebox.showwarning("Precio inválido", "El precio no puede ser negativo.")
+                self.actualizar_tabla()
+                self.entry_codigo.focus()
+                return
+
+            self.indice_seleccionado = index
+            self.carrito[index]["precio_unitario"] = nuevo_precio
+            self.carrito[index]["subtotal"] = nuevo_precio * self.carrito[index]["cantidad"]
+            self.actualizar_tabla()
+            self.entry_codigo.focus()
+
+        except ValueError:
+            messagebox.showerror("Error de formato", "Ingrese un monto de precio válido.")
             self.actualizar_tabla()
             self.entry_codigo.focus()
 
@@ -404,6 +435,7 @@ class VentasFrame(ctk.CTkFrame):
                 prod = item["producto"]
                 cant = item["cantidad"]
                 sub = item["subtotal"]
+                precio_unit_final = item["precio_unitario"]
 
                 # Descontar stock en la base de datos
                 prod.stock -= cant
@@ -413,7 +445,7 @@ class VentasFrame(ctk.CTkFrame):
                     venta=nueva_venta,
                     nombre_producto=prod.nombre,
                     cantidad=cant,
-                    precio_unitario=prod.precio_venta,
+                    precio_unitario=precio_unit_final,
                     subtotal=sub
                 )
 
