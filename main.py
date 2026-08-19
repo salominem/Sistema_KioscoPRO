@@ -1,10 +1,11 @@
 import datetime
 import customtkinter as ctk
 from PIL import Image, ImageTk
-from database_kiosco import inicializar_bd
+from database_kiosco import inicializar_bd, Usuario, hashear_password
 from modulo_ventas import VentasFrame
 from modulo_productos import ProductosFrame
 from modulo_reportes import ReportesFrame
+from modulo_empleados import EmpleadosFrame 
 from tkinter import messagebox
 
 ctk.set_appearance_mode("Light")
@@ -12,7 +13,7 @@ ctk.set_default_color_theme("blue")
 
 # Paleta Cálida y Limpia para la App Principal
 COLORES = {
-    "sidebar": "#EFECE6",         # Tono madera clara / gris arena para la barra lateral
+    "sidebar": "#EFECE6",        # Tono madera clara / gris arena para la barra lateral
     "fondo_principal": "#F4F1EA", # Fondo general cálido
     "fondo_card": "#FFFFFF",      # Paneles blancos impecables
     "acento": "#D35400",          # Naranja terracota principal
@@ -45,7 +46,6 @@ class LoginWindow(ctk.CTk):
         except Exception:
             pass
         
-        # Colores originales del Kiosco aplicados al login
         self.colores = {
             "fondo_ventana": "#F4F1EA", 
             "fondo_card": "#FFFFFF",
@@ -109,14 +109,24 @@ class LoginWindow(ctk.CTk):
         btn_ingresar.pack(pady=(10, 25))
 
     def verificar_login(self):
-        usuario = self.entry_usuario.get().strip()
-        password = self.entry_password.get().strip()
+        usuario_ingresado = self.entry_usuario.get().strip()
+        password_ingresada = self.entry_password.get().strip()
         
-        if usuario != "" and password != "":
-            self.destroy()
-            self.on_login_success(usuario, "administrador")
-        else:
+        if not usuario_ingresado or not password_ingresada:
             messagebox.showerror("Error", "Por favor ingrese usuario y contraseña", parent=self)
+            return
+
+        try:
+            # Consultar el usuario real en la base de datos y verificar contraseña hasheada
+            user_db = Usuario.get_or_none(Usuario.username == usuario_ingresado)
+            if user_db and user_db.password == hashear_password(password_ingresada):
+                rol_real = user_db.rol
+                self.destroy()
+                self.on_login_success(user_db.username, rol_real)
+            else:
+                messagebox.showerror("Error de Acceso", "Usuario o contraseña incorrectos.", parent=self)
+        except Exception as e:
+            messagebox.showerror("Error", f"Ocurrió un error al verificar el acceso:\n{e}", parent=self)
 
 
 class KioscoMainApp(ctk.CTk):
@@ -131,17 +141,14 @@ class KioscoMainApp(ctk.CTk):
         self.minsize(1000, 600)
         self.configure(fg_color=COLORES["fondo_principal"])
 
-        # Intentar cargar el ícono de la ventana (esquina superior izquierda)
         try:
             self.iconbitmap("universum.ico")
         except Exception:
             pass
 
-        # Forzar actualización y centrar perfectamente en la pantalla
         self.update_idletasks()
         self.centrar_ventana(1150, 680)
 
-        # Configurar grilla principal (Sidebar / Contenido)
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(0, weight=1)
 
@@ -163,9 +170,8 @@ class KioscoMainApp(ctk.CTk):
     def crear_sidebar(self):
         self.sidebar_frame = ctk.CTkFrame(self, fg_color=COLORES["sidebar"], corner_radius=0, width=230)
         self.sidebar_frame.grid(row=0, column=0, sticky="nsew")
-        self.sidebar_frame.grid_rowconfigure(5, weight=1)
+        self.sidebar_frame.grid_rowconfigure(6, weight=1)
 
-        # Logo superior en el Sidebar
         try:
             img_pil = Image.open("universum.jpg").resize((80, 80))
             self.logo_sidebar_img = ImageTk.PhotoImage(img_pil)
@@ -175,14 +181,13 @@ class KioscoMainApp(ctk.CTk):
         
         lbl_logo.grid(row=0, column=0, padx=0, pady=(25, 20), sticky="")
 
-        # Botones de navegación
         self.btn_nav_ventas = self.crear_boton_nav("🛒   Ventas (POS)", self.mostrar_ventas, 1)
         self.btn_nav_productos = self.crear_boton_nav("📦   Productos", self.mostrar_productos, 2)
-        self.btn_nav_reportes = self.crear_boton_nav("📊   Reportes & Caja", self.mostrar_reportes, 3)
+        self.btn_nav_empleados = self.crear_boton_nav("👥   Empleados", self.mostrar_empleados, 3)
+        self.btn_nav_reportes = self.crear_boton_nav("📊   Reportes & Caja", self.mostrar_reportes, 4)
 
-        # --- TARJETA DE SESIÓN PRO ---
         user_card = ctk.CTkFrame(self.sidebar_frame, fg_color="#E4DFD5", corner_radius=8)
-        user_card.grid(row=6, column=0, padx=15, pady=10, sticky="ew")
+        user_card.grid(row=7, column=0, padx=15, pady=10, sticky="ew")
         
         lbl_user_icon = ctk.CTkLabel(user_card, text=f"👤   {self.username.capitalize()}", font=("Roboto", 13, "bold"), text_color=COLORES["texto_principal"])
         lbl_user_icon.pack(anchor="w", padx=12, pady=(8, 2))
@@ -190,13 +195,12 @@ class KioscoMainApp(ctk.CTk):
         lbl_rol_info = ctk.CTkLabel(user_card, text=f"Rol: {self.rol.upper()}", font=("Roboto", 11), text_color=COLORES["texto_secundario"])
         lbl_rol_info.pack(anchor="w", padx=12, pady=(0, 8))
 
-        # Botón Cerrar Sesión
         btn_salir = ctk.CTkButton(
             self.sidebar_frame, text="Cerrar Sesión", font=FONT_BOTON, height=38,
             fg_color=COLORES["eliminar"], hover_color=COLORES["eliminar_hover"], text_color="#FFFFFF",
             command=self.cerrar_sesion
         )
-        btn_salir.grid(row=7, column=0, padx=15, pady=(10, 20), sticky="ew")
+        btn_salir.grid(row=8, column=0, padx=15, pady=(10, 20), sticky="ew")
 
     def crear_boton_nav(self, texto, comando, fila):
         btn = ctk.CTkButton(
@@ -246,6 +250,11 @@ class KioscoMainApp(ctk.CTk):
         self.limpiar_contenido()
         self.vista_productos = ProductosFrame(self.content_frame, COLORES)
         self.vista_productos.pack(fill="both", expand=True)
+
+    def mostrar_empleados(self):
+        self.limpiar_contenido()
+        self.vista_empleados = EmpleadosFrame(self.content_frame, COLORES, rol_usuario=self.rol)
+        self.vista_empleados.pack(fill="both", expand=True)
    
     def mostrar_reportes(self):
         self.limpiar_contenido()

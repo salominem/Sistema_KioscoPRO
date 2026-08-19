@@ -2,6 +2,7 @@ import customtkinter as ctk
 from database_kiosco import Venta, Gasto
 import datetime
 from tkcalendar import DateEntry
+from collections import defaultdict
 
 class ReportesFrame(ctk.CTkFrame):
     def __init__(self, parent, colores):
@@ -66,10 +67,8 @@ class ReportesFrame(ctk.CTkFrame):
         ventana = ctk.CTkToplevel(self)
         ventana.title("Registrar Nuevo Gasto")
         
-        # Tamaño de la ventana
         ancho, alto = 350, 250
         
-        # Centrar la ventana en la pantalla
         ventana.update_idletasks()
         x = (ventana.winfo_screenwidth() // 2) - (ancho // 2)
         y = (ventana.winfo_screenheight() // 2) - (alto // 2)
@@ -133,6 +132,12 @@ class ReportesFrame(ctk.CTkFrame):
 
         dinero_en_caja = total_ventas - total_gastos
 
+        # --- AGRUPAR VENTAS POR CADA CAJERO ---
+        ventas_por_cajero = defaultdict(float)
+        for v in ventas_filtradas:
+            cajero_nombre = getattr(v, 'cajero', 'admin')
+            ventas_por_cajero[cajero_nombre.capitalize()] += v.total_venta
+
         nombres_turnos = {"hoy": "TODOS LOS TURNOS", "manana": "TURNO MAÑANA", "tarde": "TURNO TARDE", "noche": "TURNO NOCHE"}
         
         ctk.CTkLabel(self.tabla_ventas, text=f"--- REPORTE: {self.fecha_seleccionada.strftime('%d/%m/%Y')} ({nombres_turnos[tipo_turno]}) ---", font=("Roboto", 15, "bold"), text_color=self.colores["texto_secundario"]).pack(pady=(10, 5))
@@ -143,8 +148,20 @@ class ReportesFrame(ctk.CTkFrame):
         ctk.CTkLabel(resumen_frame, text=f"Total Vendido (Ingresos): ${total_ventas:.2f}", font=("Roboto", 13, "bold"), text_color="#27AE60").pack(anchor="w", padx=15, pady=(8, 2))
         ctk.CTkLabel(resumen_frame, text=f"Total Gastos (Egresos): ${total_gastos:.2f}", font=("Roboto", 13, "bold"), text_color="#C0392B").pack(anchor="w", padx=15, pady=2)
         ctk.CTkFrame(resumen_frame, height=2, fg_color="#BDC3C7").pack(fill="x", padx=15, pady=5)
+        
+        # --- DESGLOSE POR CAJERO DENTRO DEL RESUMEN ---
+        ctk.CTkLabel(resumen_frame, text="Desglose de Ventas por Cajero:", font=("Roboto", 12, "bold"), text_color="#2C3E50").pack(anchor="w", padx=15, pady=(2, 2))
+        
+        if ventas_por_cajero:
+            for cajero, monto in ventas_por_cajero.items():
+                ctk.CTkLabel(resumen_frame, text=f"   • {cajero}: ${monto:.2f}", font=("Roboto", 12), text_color="#34495E").pack(anchor="w", padx=20, pady=1)
+        else:
+            ctk.CTkLabel(resumen_frame, text="   • Sin ventas registradas", font=("Roboto", 11, "italic"), text_color="#7F8C8D").pack(anchor="w", padx=20, pady=1)
+
+        ctk.CTkFrame(resumen_frame, height=2, fg_color="#BDC3C7").pack(fill="x", padx=15, pady=5)
         ctk.CTkLabel(resumen_frame, text=f"DINERO REAL EN CAJA: ${dinero_en_caja:.2f}", font=("Roboto", 17, "bold"), text_color="#D35400").pack(anchor="w", padx=15, pady=(2, 8))
 
+        # --- EGRESOS / GASTOS ---
         ctk.CTkLabel(self.tabla_ventas, text="--- EGRESOS / GASTOS ---", font=("Roboto", 13, "bold"), text_color="#C0392B").pack(pady=(15, 5))
         
         if gastos_filtrados:
@@ -154,6 +171,7 @@ class ReportesFrame(ctk.CTkFrame):
         else:
             ctk.CTkLabel(self.tabla_ventas, text="No hay gastos registrados en este turno.", font=("Roboto", 12), text_color=self.colores["texto_secundario"]).pack(pady=5)
 
+        # --- VENTAS REALIZADAS ---
         ctk.CTkLabel(self.tabla_ventas, text="--- VENTAS REALIZADAS ---", font=("Roboto", 13, "bold"), text_color="#27AE60").pack(pady=(15, 5))
 
         if ventas_filtradas:

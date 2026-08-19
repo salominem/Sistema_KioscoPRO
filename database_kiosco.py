@@ -18,8 +18,8 @@ class Producto(BaseModel):
     nombre = CharField()
     precio_venta = FloatField()
     precio_costo = FloatField(null=True)
-    stock = IntegerField(default=0)              # Campo agregado para el control de stock
-    fecha_vencimiento = CharField(null=True)     # Campo agregado para la fecha de vencimiento
+    stock = IntegerField(default=0)              # Control de stock
+    fecha_vencimiento = CharField(null=True)     # Fecha de vencimiento
 
 class Venta(BaseModel):
     fecha_hora = DateTimeField(default=datetime.datetime.now)
@@ -44,11 +44,17 @@ def hashear_password(password):
 
 def inicializar_bd():
     db.connect(reuse_if_open=True)
+    # Creamos las tablas incluyendo la de Usuario de forma segura
     db.create_tables([Usuario, Producto, Venta, DetalleVenta, Gasto], safe=True)
     
+    # Si no existe ningún usuario, creamos el administrador por defecto
     if not Usuario.select().exists():
         Usuario.create(
             username="admin",
             password=hashear_password("admin123"),
             rol="admin"
         )
+
+if __name__ == "__main__":
+    inicializar_bd()
+    print("Base de datos inicializada correctamente.")
